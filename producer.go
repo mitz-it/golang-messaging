@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	logging "github.com/mitz-it/golang-logging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -50,6 +51,7 @@ func (producer *Producer) Produce(ctx context.Context, message any, configure Co
 		DeliveryMode: amqp.Persistent,
 		ContentType:  string(config.contentType),
 		Body:         body,
+		MessageId:    uuid.New().String(),
 	}
 
 	amqpContext, headers := producer.createPublishContext(ctx, config, msg)
