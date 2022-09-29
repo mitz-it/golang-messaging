@@ -7,8 +7,6 @@ import (
 
 	logging "github.com/mitz-it/golang-logging"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 type IProducer interface {
@@ -48,26 +46,23 @@ func (producer *Producer) Produce(ctx context.Context, message any, configure Co
 
 	exchange := config.getExchange()
 
-	tracer := otel.Tracer("amqp")
+	msg := amqp.Publishing{
+		DeliveryMode: amqp.Persistent,
+		ContentType:  string(config.contentType),
+		Body:         body,
+	}
 
-	amqpContext, span := tracer.Start(ctx, "amqp - publish")
-	span.SetAttributes(attribute.KeyValue{Key: "messaging.system", Value: attribute.StringValue("rabbitmq")})
-	defer span.End()
+	amqpContext, headers := producer.createPublishContext(ctx, config, msg)
 
-	headers := producer.InjectAMQPHeaders(amqpContext)
+	msg.Headers = headers
 
 	err = producer.channel.PublishWithContext(
-		ctx,
+		amqpContext,
 		exchange,
 		key,
 		config.mandatory,
 		config.immediate,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  string(config.contentType),
-			Body:         body,
-			Headers:      headers,
-		},
+		msg,
 	)
 
 	failOnError(producer.logger, err, "Failed to publish message")
