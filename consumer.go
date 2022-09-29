@@ -53,15 +53,15 @@ func (consumer *Consumer) Consume(configure ConfigureConsumer, onMessageReceived
 
 	var forever chan struct{}
 
-	go consumer.handleMessages(messages, onMessageReceived, config.autoAck)
+	go consumer.handleMessages(messages, onMessageReceived, config.autoAck, config, key)
 
 	consumer.logger.Standard.Info().Msg("Waiting for messages")
 	<-forever
 }
 
-func (consumer *Consumer) handleMessages(messages <-chan amqp.Delivery, onMessageReceived OnMessageReceived, autoAck bool) {
+func (consumer *Consumer) handleMessages(messages <-chan amqp.Delivery, onMessageReceived OnMessageReceived, autoAck bool, config *ConsumerConfiguration, key string) {
 	for message := range messages {
-		ctx := consumer.ExtractAMQPHeader(context.Background(), message.Headers)
+		ctx := consumer.createConsumeContext(context.Background(), config, message, key)
 		onMessageReceived(ctx, message.Body)
 		if !autoAck {
 			message.Ack(false)
