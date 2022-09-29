@@ -7,6 +7,8 @@ import (
 
 	logging "github.com/mitz-it/golang-logging"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type IProducer interface {
@@ -46,7 +48,13 @@ func (producer *Producer) Produce(ctx context.Context, message any, configure Co
 
 	exchange := config.getExchange()
 
-	headers := producer.InjectAMQPHeaders(ctx)
+	tracer := otel.Tracer("amqp")
+
+	amqpContext, span := tracer.Start(ctx, "amqp - publish")
+	span.SetAttributes(attribute.KeyValue{Key: "messaging.system", Value: attribute.StringValue("rabbitmq")})
+	defer span.End()
+
+	headers := producer.InjectAMQPHeaders(amqpContext)
 
 	err = producer.channel.PublishWithContext(
 		ctx,
