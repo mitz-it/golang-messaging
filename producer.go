@@ -54,7 +54,7 @@ func (producer *Producer) Produce(ctx context.Context, message any, configure Co
 		MessageId:    uuid.New().String(),
 	}
 
-	amqpContext, headers := producer.createPublishContext(ctx, config, msg)
+	amqpContext, headers := producer.createPublishContext(ctx, config, queue, msg)
 
 	msg.Headers = headers
 
