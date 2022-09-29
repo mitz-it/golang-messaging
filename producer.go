@@ -10,7 +10,7 @@ import (
 )
 
 type IProducer interface {
-	Produce(message any, configure ConfigureProducer)
+	Produce(ctx context.Context, message any, configure ConfigureProducer)
 }
 
 type Producer struct {
@@ -20,7 +20,7 @@ type Producer struct {
 	logger           *logging.Logger
 }
 
-func (producer *Producer) Produce(message any, configure ConfigureProducer) {
+func (producer *Producer) Produce(ctx context.Context, message any, configure ConfigureProducer) {
 	config := configureProducer(configure, message)
 
 	declareExchange(producer.logger, producer.channel, config.ExchangeConfig)
@@ -39,12 +39,14 @@ func (producer *Producer) Produce(message any, configure ConfigureProducer) {
 
 	failOnError(producer.logger, err, "Failed to serialize message")
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.timeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, config.timeOut*time.Second)
 	defer cancel()
 
 	key := config.getKey(queue)
 
 	exchange := config.getExchange()
+
+	headers := producer.InjectAMQPHeaders(ctx)
 
 	err = producer.channel.PublishWithContext(
 		ctx,
@@ -56,6 +58,7 @@ func (producer *Producer) Produce(message any, configure ConfigureProducer) {
 			DeliveryMode: amqp.Persistent,
 			ContentType:  string(config.contentType),
 			Body:         body,
+			Headers:      headers,
 		},
 	)
 
