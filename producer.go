@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	logging "github.com/mitz-it/golang-logging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type IProducer interface {
-	Produce(message any, configure ConfigureProducer)
+	Produce(ctx context.Context, message any, configure ConfigureProducer)
 }
 
 type Producer struct {
@@ -20,7 +21,7 @@ type Producer struct {
 	logger           *logging.Logger
 }
 
-func (producer *Producer) Produce(message any, configure ConfigureProducer) {
+func (producer *Producer) Produce(ctx context.Context, message any, configure ConfigureProducer) {
 	config := configureProducer(configure, message)
 
 	declareExchange(producer.logger, producer.channel, config.ExchangeConfig)
@@ -39,24 +40,31 @@ func (producer *Producer) Produce(message any, configure ConfigureProducer) {
 
 	failOnError(producer.logger, err, "Failed to serialize message")
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.timeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, config.timeOut*time.Second)
 	defer cancel()
 
 	key := config.getKey(queue)
 
 	exchange := config.getExchange()
 
+	msg := amqp.Publishing{
+		DeliveryMode: amqp.Persistent,
+		ContentType:  string(config.contentType),
+		Body:         body,
+		MessageId:    uuid.New().String(),
+	}
+
+	amqpContext, headers := producer.createPublishContext(ctx, config, queue, msg)
+
+	msg.Headers = headers
+
 	err = producer.channel.PublishWithContext(
-		ctx,
+		amqpContext,
 		exchange,
 		key,
 		config.mandatory,
 		config.immediate,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  string(config.contentType),
-			Body:         body,
-		},
+		msg,
 	)
 
 	failOnError(producer.logger, err, "Failed to publish message")

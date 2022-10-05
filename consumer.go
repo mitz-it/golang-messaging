@@ -1,11 +1,13 @@
 package messaging
 
 import (
+	"context"
+
 	logging "github.com/mitz-it/golang-logging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type OnMessageReceived func(message []byte)
+type OnMessageReceived func(ctx context.Context, message []byte)
 
 type IConsumer interface {
 	Consume(configure ConfigureConsumer, onMessageReceived OnMessageReceived)
@@ -51,15 +53,16 @@ func (consumer *Consumer) Consume(configure ConfigureConsumer, onMessageReceived
 
 	var forever chan struct{}
 
-	go handleMessages(messages, onMessageReceived, config.autoAck)
+	go consumer.handleMessages(messages, onMessageReceived, config.autoAck, config, key)
 
 	consumer.logger.Standard.Info().Msg("Waiting for messages")
 	<-forever
 }
 
-func handleMessages(messages <-chan amqp.Delivery, onMessageReceived OnMessageReceived, autoAck bool) {
+func (consumer *Consumer) handleMessages(messages <-chan amqp.Delivery, onMessageReceived OnMessageReceived, autoAck bool, config *ConsumerConfiguration, key string) {
 	for message := range messages {
-		onMessageReceived(message.Body)
+		ctx := consumer.createConsumeContext(context.Background(), config, message, key)
+		onMessageReceived(ctx, message.Body)
 		if !autoAck {
 			message.Ack(false)
 		}
