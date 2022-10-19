@@ -48,36 +48,6 @@ func (producer *Producer) createPublishContext(ctx context.Context, config *Prod
 	return producerContext, headers
 }
 
-func setNetworkTags(span trace.Span, connectionString string) {
-	hostOrIp := extractHostOrIPAddressFromConnectionString(connectionString)
-	port := getPortFromConnectionString(connectionString)
-	hostName := getHostname()
-	span.SetAttributes(attribute.KeyValue{Key: "net.name", Value: attribute.StringValue(hostName)})
-	span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.port", Value: attribute.IntValue(port)})
-
-	if match, ip := isIPAddress(hostOrIp); match {
-		peerNames := getPeerNames(ip)
-		peerAddresses := getPeerAddresses(peerNames[0])
-		peer_name_value := joinNetworkTagValus(peerNames)
-		peer_addr_value := joinNetworkTagValus(peerAddresses)
-
-		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.name", Value: attribute.StringValue(peer_name_value)})
-		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.addr", Value: attribute.StringValue(peer_addr_value)})
-		return
-	}
-
-	if match, host := isIPAddress(hostOrIp); !match {
-		peerAddresses := getPeerAddresses(host)
-		peerNames := getPeerNames(peerAddresses[0])
-		peer_name_value := joinNetworkTagValus(peerNames)
-		peer_addr_value := joinNetworkTagValus(peerAddresses)
-
-		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.name", Value: attribute.StringValue(peer_name_value)})
-		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.addr", Value: attribute.StringValue(peer_addr_value)})
-		return
-	}
-}
-
 func (producer *Producer) buildProducerDestination(config *ProducerConfiguration, queue *amqp.Queue, message amqp.Publishing) string {
 	if config.QueueConfig != nil && config.QueueConfig.name != "" {
 		return config.QueueConfig.name
@@ -148,4 +118,59 @@ func (consumer *Consumer) buildConsumerDestination(config *ConsumerConfiguration
 func (consumer *Consumer) buildConsumerSpanName(destination, operation string) string {
 	spanName := fmt.Sprintf("%s %s", destination, operation)
 	return spanName
+}
+
+func setNetworkTags(span trace.Span, connectionString string) {
+	hostOrIp := hostOrIPFromConnectionString(connectionString)
+	port := getPortFromConnectionString(connectionString)
+	hostName := getHostname()
+
+	setHostnameTag(hostName, span)
+	setPeerPortTag(port, span)
+
+	if match, ip := isIPAddress(hostOrIp); match {
+		peerNames := getPeerNames(ip)
+		peerAddresses := getPeerAddresses(peerNames[0])
+		peer_name_value := joinNetworkTagValus(peerNames)
+		peer_addr_value := joinNetworkTagValus(peerAddresses)
+
+		setPeerNameTag(peer_name_value, span)
+		setPeerAddressTag(peer_addr_value, span)
+		return
+	}
+
+	if match, host := isIPAddress(hostOrIp); !match {
+		peerAddresses := getPeerAddresses(host)
+		peerNames := getPeerNames(peerAddresses[0])
+		peer_name_value := joinNetworkTagValus(peerNames)
+		peer_addr_value := joinNetworkTagValus(peerAddresses)
+
+		setPeerNameTag(peer_name_value, span)
+		setPeerAddressTag(peer_addr_value, span)
+		return
+	}
+}
+
+func setHostnameTag(hostName string, span trace.Span) {
+	if hostName != "" {
+		span.SetAttributes(attribute.KeyValue{Key: "net.name", Value: attribute.StringValue(hostName)})
+	}
+}
+
+func setPeerPortTag(port int, span trace.Span) {
+	if port != 0 {
+		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.port", Value: attribute.IntValue(port)})
+	}
+}
+
+func setPeerNameTag(peer_name_value string, span trace.Span) {
+	if peer_name_value != "" {
+		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.name", Value: attribute.StringValue(peer_name_value)})
+	}
+}
+
+func setPeerAddressTag(peer_addr_value string, span trace.Span) {
+	if peer_addr_value != "" {
+		span.SetAttributes(attribute.KeyValue{Key: "net.sock.peer.addr", Value: attribute.StringValue(peer_addr_value)})
+	}
 }
