@@ -14,7 +14,7 @@ const consumerOperation string = "receive"
 const producerOperation string = "send"
 const temporaryDestination string = "(temporary)"
 
-func (producer *Producer) createPublishContext(ctx context.Context, config *ProducerConfiguration, queue *amqp.Queue, message amqp.Publishing) (context.Context, map[string]interface{}) {
+func (producer *Producer) createProducerContext(ctx context.Context, config *ProducerConfiguration, queue *amqp.Queue, message amqp.Publishing) (context.Context, map[string]interface{}) {
 	tracer := otel.Tracer("amqp")
 	destination := producer.buildProducerDestination(config, queue, message)
 	spanName := producer.buildProducerSpanName(destination, producerOperation)
