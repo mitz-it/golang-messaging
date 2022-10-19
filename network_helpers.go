@@ -20,7 +20,7 @@ func isIPAddress(hostOrIpAddr string) (bool, string) {
 	return match, hostOrIpAddr
 }
 
-func extractHostOrIPAddressFromConnectionString(connectionString string) string {
+func hostOrIPFromConnectionString(connectionString string) string {
 	regex := regexp.MustCompile(host_or_ip_regex)
 	matches := regex.FindAllStringSubmatch(connectionString, -1)[0]
 	hostOrIpAddr := matches[1]
@@ -44,7 +44,7 @@ func isAMQPConnectionString(connectionString string) bool {
 func getPortFromConnectionString(connectionString string) int {
 	regex := regexp.MustCompile(connString_port_regex)
 	matches := regex.FindAllStringSubmatch(connectionString, -1)[0]
-	port, _ := strconv.Atoi(matches[0])
+	port, _ := strconv.Atoi(matches[1])
 	return port
 }
 
