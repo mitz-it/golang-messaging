@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"net"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -60,9 +59,4 @@ func getPeerAddresses(host string) []string {
 
 func joinNetworkTagValus(values []string) string {
 	return strings.Join(values, ",")
-}
-
-func getHostname() string {
-	hostname, _ := os.Hostname()
-	return hostname
 }
