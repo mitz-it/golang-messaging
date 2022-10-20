@@ -8,12 +8,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const otel_tracer_name string = "amqp"
+
 const consumerOperation string = "receive"
 const producerOperation string = "send"
 const temporaryDestination string = "(temporary)"
 
 func (producer *Producer) createProducerContext(ctx context.Context, config *ProducerConfiguration, queue *amqp.Queue, message amqp.Publishing) (context.Context, map[string]interface{}) {
-	tracer := otel.Tracer("amqp")
+	tracer := otel.Tracer(otel_tracer_name)
 	destination := producer.buildProducerDestination(config, queue, message)
 	spanName := producer.buildProducerSpanName(destination, producerOperation)
 	producerContext, span := tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindProducer))
@@ -34,7 +36,7 @@ func (producer *Producer) createProducerContext(ctx context.Context, config *Pro
 func (consumer *Consumer) createConsumeContext(ctx context.Context, config *ConsumerConfiguration, message amqp.Delivery, key string) context.Context {
 	amqpContext := consumer.ExtractAMQPHeader(context.Background(), message.Headers)
 
-	tracer := otel.Tracer("amqp")
+	tracer := otel.Tracer(otel_tracer_name)
 
 	destination := consumer.buildConsumerDestination(config, message, key)
 	spanName := consumer.buildConsumerSpanName(destination, consumerOperation)
