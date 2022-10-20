@@ -37,10 +37,8 @@ func (consumer *Consumer) createConsumeContext(ctx context.Context, config *Cons
 	amqpContext := consumer.ExtractAMQPHeader(context.Background(), message.Headers)
 
 	tracer := otel.Tracer(otel_tracer_name)
-
 	destination := consumer.buildConsumerDestination(config, message, key)
 	spanName := consumer.buildConsumerSpanName(destination, consumerOperation)
-
 	consumerContext, span := tracer.Start(amqpContext, spanName, trace.WithSpanKind(trace.SpanKindConsumer))
 
 	payloadSize := len(message.Body)
