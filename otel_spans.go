@@ -89,10 +89,8 @@ func setNetTags(span trace.Span, connectionString string) {
 
 		setPeerNameTag(peer_name_value, span)
 		setPeerAddressTag(peer_addr_value, span)
-		return
-	}
-
-	if match, host := isIPAddress(hostOrIp); !match {
+	} else {
+		host := hostOrIp
 		peerAddresses := getPeerAddresses(host)
 		peerNames := getPeerNames(peerAddresses[0])
 		peer_name_value := joinNetworkTagValus(peerNames)
@@ -100,7 +98,6 @@ func setNetTags(span trace.Span, connectionString string) {
 
 		setPeerNameTag(peer_name_value, span)
 		setPeerAddressTag(peer_addr_value, span)
-		return
 	}
 }
 
