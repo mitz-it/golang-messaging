@@ -11,6 +11,7 @@ import (
 )
 
 type IProducer interface {
+	ProduceWithEnvelop(ctx context.Context, messageEnvelop MessageEnvelop, configure ConfigureProducer)
 	Produce(ctx context.Context, message any, configure ConfigureProducer)
 }
 
