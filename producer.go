@@ -21,7 +21,26 @@ type Producer struct {
 	logger           *logging.Logger
 }
 
+type MessageEnvelop struct {
+	Headers map[string]interface{}
+	Data    any
+}
+
+func (producer *Producer) ProduceWithEnvelop(ctx context.Context, messageEnvelop MessageEnvelop, configure ConfigureProducer) {
+	producer.produce(ctx, messageEnvelop, configure)
+}
+
 func (producer *Producer) Produce(ctx context.Context, message any, configure ConfigureProducer) {
+	messageEnvelop := MessageEnvelop{
+		Data: message,
+	}
+
+	producer.produce(ctx, messageEnvelop, configure)
+}
+
+func (producer *Producer) produce(ctx context.Context, messageEnvelop MessageEnvelop, configure ConfigureProducer) {
+	message := messageEnvelop.Data
+
 	config := configureProducer(configure, message)
 
 	declareExchange(producer.logger, producer.channel, config.ExchangeConfig)
@@ -55,6 +74,12 @@ func (producer *Producer) Produce(ctx context.Context, message any, configure Co
 	}
 
 	amqpContext, headers := producer.createProducerContext(ctx, config, queue, msg)
+
+	if messageEnvelop.Headers != nil && len(messageEnvelop.Headers) > 0 {
+		for key, value := range messageEnvelop.Headers {
+			headers[key] = value
+		}
+	}
 
 	msg.Headers = headers
 
